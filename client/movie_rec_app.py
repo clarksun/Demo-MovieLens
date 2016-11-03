@@ -1,8 +1,9 @@
-
+# -*- coding: utf-8 -*-
 from appdata import AppData
 import predictionio
 import sys
 from sets import Set
+import json
 
 from app_config import APP_KEY, API_URL
 
@@ -12,8 +13,9 @@ SIM_ENGINE_NAME = 'movie-sim'
 class App:
 
   def __init__(self):
-    self._app_data = AppData()
-    self._client = predictionio.Client(APP_KEY, 1, API_URL)
+	self._app_data = AppData()
+	#self._client = predictionio.Client(APP_KEY, 1, API_URL)
+	self._client = predictionio.EngineClient()
 
   def run(self):
     state = "[Main Menu]"
@@ -59,15 +61,21 @@ class App:
       choice = raw_input().lower()
       u = self._app_data.get_user(choice)
       if u:
-        n = 10
+        n = 5
         print "[Info] Getting top %s item recommendations for user %s..." % (n, u.uid)
-        try:
-          self._client.identify(u.uid)
-          rec = self._client.get_itemrec_topn(ENGINE_NAME, n)
-          u.rec = rec['pio_iids']
-          self.display_items(u.rec)
-        except predictionio.ItemRecNotFoundError:
-          print "[Info] Recommendation not found"
+		#try:
+			#self._client.identify(u.uid)
+          	#rec = self._client.get_itemrec_topn(ENGINE_NAME, n)
+        rec = self._client.send_query(data={"user":u.uid, "num":n})
+        print 'predictionIO返回结果', rec
+        itemScores = rec['itemScores']
+        iids = []
+        for itemScore in itemScores:
+          iids.append(itemScore['item'])
+        u.rec = iids
+        self.display_items(u.rec)
+		#except:
+		#  print "[Info] Recommendation not found"
 
         print "[Info] Go back to previous menu..."
         break
@@ -91,12 +99,18 @@ class App:
         n = 10
         self.display_items((i.iid,), all_info=False)
         print "\n[Info] People who liked this may also liked..."
-        try:
-          rec = self._client.get_itemsim_topn(SIM_ENGINE_NAME, i.iid, n,
-            { 'pio_itypes' : i.genres })
-          self.display_items(rec['pio_iids'], all_info=False)
-        except predictionio.ItemSimNotFoundError:
-          print "[Info] Similar movies not found"
+		#try:
+			#rec = self._client.get_itemsim_topn(SIM_ENGINE_NAME, i.iid, n,{ 'pio_itypes' : i.genres })
+		  #self.display_items(rec['pio_iids'], all_info=False)
+        rec = self._client.send_query(data={"item":i.iid, "num":n})
+        print 'predictionIO返回结果', rec
+        itemScores = rec['itemScores']
+        iids = []
+        for itemScore in itemScores:
+          iids.append(itemScore['item'])
+        self.display_items(iids)
+		#except:
+		  #print "[Info] Similar movies not found"
 
         print "[Info] Go back to previous menu..."
         break
@@ -127,12 +141,20 @@ class App:
         n = 10
         self.display_items(viewed_iids, all_info=False)
         print "\n[Info] Top %s similar movies..." % n
-        try:
-          rec = self._client.get_itemsim_topn(SIM_ENGINE_NAME, choice, n,
-            { 'pio_itypes' : list(viewed_genres) })
-          self.display_items(rec['pio_iids'], all_info=False)
-        except predictionio.ItemSimNotFoundError:
-          print "[Info] Similar movies not found"
+		#try:
+        #  rec = self._client.get_itemsim_topn(SIM_ENGINE_NAME, choice, n,
+        #    { 'pio_itypes' : list(viewed_genres) })
+        #  self.display_items(rec['pio_iids'], all_info=False)
+        #except:
+        #  print "[Info] Similar movies not found"
+        print 'viewed_genres', viewed_genres
+        rec = self._client.send_query(data={"item":choice, "num":n, "fields":[{"name":"genres", "values":list(viewed_genres), "bias":2},]})
+        print 'predictionIO返回结果', rec
+        itemScores = rec['itemScores']
+        iids = []
+        for itemScore in itemScores:
+          iids.append(itemScore['item'])
+        self.display_items(iids)
 
         print "[Info] Go back to previous menu..."
         break
@@ -161,10 +183,14 @@ class App:
         print "\n[Info] Getting New Recommendation..."
         n = 10
         try:
-          self._client.identify(u.uid)
-          rec = self._client.get_itemrec_topn(ENGINE_NAME, n)
-          u.rec = rec['pio_iids']
-        except predictionio.ItemRecNotFoundError:
+          rec = self._client.send_query(data={"user":u.uid, "num":n})
+          print 'predictionIO返回结果', rec
+          itemScores = rec['itemScores']
+          iids = []
+          for itemScore in itemScores:
+            iids.append(itemScore['item'])
+          u.rec = iids
+        except:
           print "[Info] Recommendation not found"
 
         print "\n[Info] Movies recommended to this user:"

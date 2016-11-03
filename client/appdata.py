@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 import datetime
 from operator import itemgetter, attrgetter
 
@@ -97,7 +97,6 @@ class AppData:
       for g,flag in zip(genre_names, genres_flags):
         if flag == '1':
           genres = genres + (g,)
-
       try:
         # eg. 01-Jan-1994
         release_date = datetime.datetime.strptime(data[2], "%d-%b-%Y")
